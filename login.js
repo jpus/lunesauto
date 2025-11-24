@@ -12,6 +12,11 @@ async function sendTelegramMessage(botToken, chatId, message) {
   });
 }
 
+// 替代 waitForTimeout 的辅助函数
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 // 模拟人类行为的函数
 async function simulateHumanBehavior(page) {
   console.log('开始模拟人类行为...');
@@ -20,7 +25,7 @@ async function simulateHumanBehavior(page) {
   await page.evaluate(() => {
     window.scrollTo(0, Math.random() * 300);
   });
-  await page.waitForTimeout(500 + Math.random() * 1000);
+  await delay(500 + Math.random() * 1000);
   
   console.log('人类行为模拟完成');
 }
@@ -51,7 +56,7 @@ async function waitForCloudflareChallenge(page, timeout = 45000) {
     }
     
     console.log(`等待挑战中... (${Date.now() - startTime}ms)`);
-    await page.waitForTimeout(3000);
+    await delay(3000);
   }
   
   throw new Error(`Cloudflare 挑战超时 (${timeout}ms)`);
@@ -59,20 +64,13 @@ async function waitForCloudflareChallenge(page, timeout = 45000) {
 
 async function login() {
   const browser = await puppeteer.launch({
-    headless: 'new', // 使用新的 headless 模式
+    headless: true, // 使用传统的 headless 模式
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
       '--disable-dev-shm-usage',
       '--disable-gpu',
       '--disable-blink-features=AutomationControlled',
-      '--disable-features=VizDisplayCompositor',
-      '--disable-software-rasterizer',
-      '--disable-web-security',
-      '--disable-features=site-per-process',
-      '--disable-background-timer-throttling',
-      '--disable-backgrounding-occluded-windows',
-      '--disable-renderer-backgrounding',
       '--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
     ]
   });
@@ -103,7 +101,7 @@ async function login() {
       timeout: 30000 
     });
     
-    await page.waitForTimeout(2000);
+    await delay(2000);
     
     // 现在访问目标网站
     await page.goto(process.env.WEBSITE_URL, { 
@@ -159,33 +157,39 @@ async function login() {
     
     if (emailField) {
       console.log('输入邮箱...');
-      await page.click(emailField, { delay: 100 });
-      await page.waitForTimeout(500);
+      await page.click(emailField);
+      await delay(500);
       
       // 清空字段并输入
       await page.evaluate((selector) => {
-        document.querySelector(selector).value = '';
+        const element = document.querySelector(selector);
+        if (element) element.value = '';
       }, emailField);
       
-      await page.type(emailField, process.env.USERNAME, { 
-        delay: 50 + Math.random() * 100 
-      });
+      // 模拟人类输入
+      const username = process.env.USERNAME;
+      for (let char of username) {
+        await page.type(emailField, char, { delay: 50 + Math.random() * 100 });
+      }
     }
     
-    await page.waitForTimeout(1000 + Math.random() * 1000);
+    await delay(1000 + Math.random() * 1000);
     
     if (passwordField) {
       console.log('输入密码...');
-      await page.click(passwordField, { delay: 100 });
-      await page.waitForTimeout(500);
+      await page.click(passwordField);
+      await delay(500);
       
       await page.evaluate((selector) => {
-        document.querySelector(selector).value = '';
+        const element = document.querySelector(selector);
+        if (element) element.value = '';
       }, passwordField);
       
-      await page.type(passwordField, process.env.PASSWORD, { 
-        delay: 50 + Math.random() * 100 
-      });
+      // 模拟人类输入
+      const password = process.env.PASSWORD;
+      for (let char of password) {
+        await page.type(passwordField, char, { delay: 50 + Math.random() * 100 });
+      }
     }
     
     // 再次模拟人类行为
@@ -233,7 +237,7 @@ async function login() {
     
     // 等待页面变化
     console.log('等待登录结果...');
-    await page.waitForTimeout(8000);
+    await delay(8000);
     
     // 检查是否重定向
     const currentUrl = page.url();
